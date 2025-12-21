@@ -113,20 +113,23 @@ bool InBounds(int r, int c)
 
 void flipper(int x, int y, byte player)
 {
-
+    myArray[x, y] = player;
     byte opponent = (player == 1) ? (byte)2 : (byte)1;
     for (int dx = -1; dx <= 1; dx++) for (int dy = -1; dy <= 1; dy++)
         {
             if (dx == 0 && dy == 0) continue;
             int Cor_x = x + dx;
             int Cor_y = y + dy;
-            if (!InBounds(Cor_x, Cor_y) || myArray[Cor_x, Cor_y] !=opponent) continue;
-            while (InBounds(Cor_x, Cor_y) && myArray[Cor_x,Cor_y]!=player)
-            {
-                if (myArray[Cor_x, Cor_y] != player)
+            if (!InBounds(Cor_x, Cor_y) || myArray[Cor_x, Cor_y] != opponent) continue;
 
-                {
-                    if (myArray[Cor_x, Cor_y] == 0) break;
+            while (InBounds(Cor_x, Cor_y) && myArray[Cor_x, Cor_y] == opponent)
+            {
+                Cor_x += dx; Cor_y += dy;
+            }
+            if (!InBounds(Cor_x, Cor_y) || myArray[Cor_x, Cor_y] != player)
+                continue;
+            Cor_x -= dx; Cor_y -= dy;
+
 
                     while (Cor_x != x || Cor_y != y)
                     {
@@ -135,15 +138,14 @@ void flipper(int x, int y, byte player)
 
                     }
 
-
-                }
+                
 
 
 
 
             }
         }
-}
+
 
 
 void teken_raster(object o, EventArgs ea)
@@ -195,13 +197,9 @@ void zet(Object o, MouseEventArgs ea)
     if (legal_array[x, y] != current_player) return;
 
         afbeelding.Invalidate();
+    flipper(x, y, current_player);
+    legal_array =legal();
 
-
-        if (Beurt % 2 == 0) {myArray[x, y] = 1;}
-        if(Beurt % 2 == 1) { myArray[x, y] = 2;}
-
-        legal_array =legal();
-        flipper(x,y, current_player);
     teken_raster(null, EventArgs.Empty);
     Beurt += 1;
 }
