@@ -4,28 +4,132 @@ using System.Diagnostics.Metrics;
 using System.Drawing;
 using System.Linq;
 using System.Media;
+using System.Security.Cryptography;
 using System.Windows.Forms;
 
 Form scherm = new Form();
 scherm.Text = "reversi";
 scherm.BackColor = Color.LightYellow;
-scherm.ClientSize = new Size(260, 260);
+scherm.ClientSize = new Size(700, 700);
 
 // met een Bitmap kun je een plaatje opslaan in het geheugen
-Bitmap plaatje = new Bitmap(200, 200);
+Bitmap plaatje = new Bitmap(500, 500);
+
+//grootte van het speelveld
+int grootte = 6;
+
+//aanmaken van speelveld array
+byte[,] myArray = matrix(grootte);
+
+//aangeven welke speler aan de beurt is
+int Beurt = 0;
+
+//array voor legale zetten
+byte[,] legal_array = legal();
+
+//variabele voor help
+bool helpAan = false;
+
+//Pasteller om te kijken of er 2 keer op rij wordt gepast 
+int PasTeller = 0;
+
+//bool voor of het spel bezig is
+bool SpelBezig = true;
+
+//hoeveelheid beginstenen
+int rood = 2;
+int blauw = 2;
 
 
-Button knop = new Button();
-scherm.Controls.Add(knop);
-knop.Location = new Point(10, 10);
-knop.Size = new Size(10, 10);
+
+//button om een nieuw spel te starten 
+Button NieuwSpelKnop = new Button();
+scherm.Controls.Add(NieuwSpelKnop);
+NieuwSpelKnop.Location = new Point(10, 50);
+NieuwSpelKnop.Size = new Size(100, 20);
+NieuwSpelKnop.Text = "Nieuw spel";
+NieuwSpelKnop.BackColor = Color.White;
+
+//button om mogelijke zetten te laten zien
+Button Help = new Button();
+scherm.Controls.Add(Help);
+Help.Location = new Point(10, 80);
+Help.Size = new Size(100, 20);
+Help.Text = "Help";
+Help.BackColor = Color.White;
+
+//button om te passen
+Button Pas = new Button();
+scherm.Controls.Add(Pas);
+Pas.Location = new Point(10, 110);
+Pas.Size = new Size(100, 20);
+Pas.Text = "Pas";
+Pas.BackColor = Color.White;
+
+//keuze van de grootte van het speelveld (dropdown)
+ComboBox grootteKeuze = new ComboBox();
+scherm.Controls.Add(grootteKeuze);
+grootteKeuze.Location = new Point(10, 140);
+grootteKeuze.Width = 100;
+grootteKeuze.DropDownStyle = ComboBoxStyle.DropDownList;
+
+grootteKeuze.Items.Add(4);
+grootteKeuze.Items.Add(6);
+grootteKeuze.Items.Add(8);
+grootteKeuze.Items.Add(10);
+grootteKeuze.SelectedIndex = 1;
+
+Label scoreLabel = new Label();
+scoreLabel.Location = new Point(10, 170);
+scoreLabel.Size = new Size(120, 50);
+scoreLabel.Font = new Font(scoreLabel.Font.FontFamily, 15, FontStyle.Bold);
+scherm.Controls.Add(scoreLabel);
+
+
 // een Label kan ook gebruikt worden om een Bitmap te laten zien
 Label afbeelding = new Label();
 scherm.Controls.Add(afbeelding);
-afbeelding.Location = new Point(40, 40);
-afbeelding.Size = new Size(200, 200);
+afbeelding.Location = new Point(150, 50);
+afbeelding.Size = new Size(500, 500);
 afbeelding.BackColor = Color.White;
 afbeelding.Image = plaatje;
+
+
+//grote label onderaan voor wiens zet het is
+Label WiensZet = new Label();
+scherm.Controls.Add(WiensZet);
+WiensZet.Location = new Point(160, 560);
+WiensZet.Size = new Size(480, 100);
+WiensZet.Text = "Rood is aan zet";
+WiensZet.TextAlign = ContentAlignment.MiddleCenter;
+WiensZet.ForeColor = Color.White;
+WiensZet.BackColor = Color.Red;
+WiensZet.Font = new Font("Segoe UI", 30);
+
+
+
+
+
+
+//functie voor nieuwspel knop
+void NieuwSpel(int grootte)
+    {
+        myArray = matrix(grootte);
+        Beurt = 0;
+        UpdateScore();
+        legal_array = legal();
+        teken_raster(null, EventArgs.Empty);
+    }
+
+void UpdateScore()
+{
+    TelStenen(out int rood, out int blauw);
+    scoreLabel.Text = $"Blauw: {blauw}\nRood: {rood}";
+}
+
+
+
+
 
 byte[,] matrix(int n)
 {
@@ -51,7 +155,7 @@ byte[,] matrix(int n)
 
     return matrix;
 }
-byte[,] myArray = matrix(4);
+
 bool InBounds(int r, int c)
 {
     return r >= 0 && r < myArray.GetLength(0) &&
@@ -115,6 +219,8 @@ bool InBounds(int r, int c)
 
     return legal_array;
 }
+
+
 
 void flipper(int x, int y, byte player)
 {
@@ -192,15 +298,24 @@ void teken_raster(object o, EventArgs ea)
                     graphics.FillEllipse(player_1, i * raster_size, j * raster_size, raster_size, raster_size);
                 else if (myArray[i, j] == 2)
                     graphics.FillEllipse(player_2, i * raster_size, j * raster_size, raster_size, raster_size);
+
+                if(helpAan && legal_array[i, j] == (Beurt % 2 == 0 ? (byte)1 : (byte)2))
+                {
+                    int grootteHint = raster_size / 3;
+                    int offset = (raster_size - grootteHint) / 2;
+                    graphics.FillEllipse(Brushes.Green, i * raster_size + offset, j * raster_size + offset, grootteHint, grootteHint);
+
+                }
             }
+        
+            
     }
 
     afbeelding.Image = plaatje;
     afbeelding.Refresh();
 }
 
-int Beurt = 0;
-byte[,] legal_array = legal();
+
 void zet(Object o, MouseEventArgs ea)
 {
     int raster_size = (int)(afbeelding.Width) / myArray.GetLength(0);
@@ -210,17 +325,132 @@ void zet(Object o, MouseEventArgs ea)
     byte current_player = Beurt % 2 == 0 ? (byte)1 : (byte)2;
     if (legal_array[x, y] != current_player) return;
 
-        afbeelding.Invalidate();
+    afbeelding.Invalidate();
     flipper(x, y, current_player);
-    legal_array =legal();
+    UpdateScore();
+    legal_array = legal();
 
     teken_raster(null, EventArgs.Empty);
     Beurt += 1;
+
+    //zorgen dat de pas teller wordt gereset
+    if (PasTeller == 1)
+        PasTeller -= 1;
+    
+    
+    
+
+    //zorgen dat het wienszet label de juiste kleur en tekst heeft
+    if (Beurt%2 == 0)
+    {
+        WiensZet.Text = "Rood is aan de beurt";
+        WiensZet.BackColor = Color.Red;
+    }
+    else 
+    {
+        WiensZet.Text = "Blauw is aan de beurt";
+        WiensZet.BackColor = Color.Blue;
+    }
 }
+
+
+void TelStenen(out int rood, out int blauw)
+{
+    rood = 0;
+    blauw = 0;
+    
+    int n = myArray.GetLength(0);
+
+    for (int x = 0; x < n; x++)
+    {
+        for (int y = 0; y < n; y++)
+        {
+            if (myArray[x, y] == 1)
+                rood++;
+            else if (myArray[x, y] == 2)
+                blauw++;
+        }
+    }
+
+    //kijken of er is gewonnen
+    if (rood + blauw == grootte * grootte)
+    {
+        if (rood > blauw)
+        {
+            WiensZet.Text = "Rood heeft gewonnen!";
+            WiensZet.BackColor = Color.Red;
+        }
+        if (blauw > rood)
+        {
+            WiensZet.Text = "Blauw heeft gewonnen!";
+            WiensZet.BackColor = Color.Blue;
+        }
+        if (blauw == rood)
+        {
+            WiensZet.Text = "Het is gelijkspel";
+            WiensZet.BackColor = Color.Magenta;
+        }
+    }
+}
+
+
+//functie om te kunnen passen
+void PasHandler(object o,EventArgs e)
+{
+    Beurt += 1;
+    PasTeller += 1;
+    legal_array = legal();
+    teken_raster(null, EventArgs.Empty);
+    if (PasTeller == 2)
+    {
+        if (rood > blauw)
+        {
+            WiensZet.Text = "Rood heeft gewonnen!";
+            WiensZet.BackColor = Color.Red;
+        }
+        if (blauw > rood)
+        {
+            WiensZet.Text = "Blauw heeft gewonnen!";
+            WiensZet.BackColor = Color.Blue;
+        }
+        if (blauw == rood)
+        {
+            WiensZet.Text = "Het is gelijkspel";
+            WiensZet.BackColor = Color.Magenta;
+        }
+    }
+}
+
+
+
+
+
 
 
 afbeelding.MouseClick += zet;
 afbeelding.MouseClick += teken_raster;
 
-knop.Click += teken_raster;
+//dropdown event handler
+grootteKeuze.SelectedIndexChanged += (o, e) =>
+{
+    int gekozenGrootte = (int)grootteKeuze.SelectedItem;
+    NieuwSpel(gekozenGrootte);
+};
+
+
+//pas button
+Pas.Click += PasHandler;
+
+//help button
+Help.Click += (s, e) =>
+{
+    helpAan = !helpAan; //verander help waarde
+    teken_raster(null, EventArgs.Empty); //teken raster opnieuw
+};
+
+//nieuw spel button
+NieuwSpelKnop.Click += teken_raster;
+//teken het eerste speelveld van 6x6
+NieuwSpel(6);
+
 Application.Run(scherm);
