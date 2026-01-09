@@ -1,10 +1,5 @@
 using System;
-using System.ComponentModel;
-using System.Diagnostics.Metrics;
 using System.Drawing;
-using System.Linq;
-using System.Media;
-using System.Security.Cryptography;
 using System.Windows.Forms;
 
 Form scherm = new Form();
@@ -15,11 +10,8 @@ scherm.ClientSize = new Size(700, 700);
 // met een Bitmap kun je een plaatje opslaan in het geheugen
 Bitmap plaatje = new Bitmap(500, 500);
 
-//grootte van het speelveld
-int grootte = 6;
-
 //aanmaken van speelveld array
-byte[,] myArray = matrix(grootte);
+byte[,] myArray = matrix(6);
 
 //aangeven welke speler aan de beurt is
 int Beurt = 0;
@@ -32,9 +24,6 @@ bool helpAan = false;
 
 //Pasteller om te kijken of er 2 keer op rij wordt gepast 
 int PasTeller = 0;
-
-//bool voor of het spel bezig is
-bool SpelBezig = true;
 
 //hoeveelheid beginstenen
 int rood = 2;
@@ -66,10 +55,18 @@ Pas.Size = new Size(100, 20);
 Pas.Text = "Pas";
 Pas.BackColor = Color.White;
 
+//label voor keuze aangeven
+Label KeuzeUitleg = new Label();
+KeuzeUitleg.Location = new Point(10, 140);
+KeuzeUitleg.Size = new Size(100, 20);
+KeuzeUitleg.Text = "Grootte: n x n";
+scherm.Controls.Add(KeuzeUitleg);
+
+
 //keuze van de grootte van het speelveld (dropdown)
 ComboBox grootteKeuze = new ComboBox();
 scherm.Controls.Add(grootteKeuze);
-grootteKeuze.Location = new Point(10, 140);
+grootteKeuze.Location = new Point(10, 160);
 grootteKeuze.Width = 100;
 grootteKeuze.DropDownStyle = ComboBoxStyle.DropDownList;
 
@@ -79,10 +76,11 @@ grootteKeuze.Items.Add(8);
 grootteKeuze.Items.Add(10);
 grootteKeuze.SelectedIndex = 1;
 
+//Label om score te laten zien
 Label scoreLabel = new Label();
-scoreLabel.Location = new Point(10, 170);
+scoreLabel.Location = new Point(10, 190);
 scoreLabel.Size = new Size(120, 50);
-scoreLabel.Font = new Font(scoreLabel.Font.FontFamily, 15, FontStyle.Bold);
+scoreLabel.Font = new Font("Segoe UI", 15, FontStyle.Bold);
 scherm.Controls.Add(scoreLabel);
 
 
@@ -114,20 +112,32 @@ WiensZet.Font = new Font("Segoe UI", 30);
 //functie voor nieuwspel knop
 void NieuwSpel(int grootte)
     {
-        myArray = matrix(grootte);
-        Beurt = 0;
-        UpdateScore();
-        legal_array = legal();
-        teken_raster(null, EventArgs.Empty);
+    myArray = matrix(grootte);
+    Beurt = 0;
+    PasTeller = 0;
+    helpAan = false;
+    UpdateScore();
+    legal_array = legal();
+    teken_raster(null, EventArgs.Empty);
     }
 
+
+//voor het updaten van de score aan de linkerkant van het scherm
 void UpdateScore()
 {
-    TelStenen(out int rood, out int blauw);
+    TelStenen();
     scoreLabel.Text = $"Blauw: {blauw}\nRood: {rood}";
 }
 
-
+//checken of de speler een legale zet heeft, want dan mogen ze niet passen
+bool HeeftLegaleZet(byte speler)
+{
+    for (int x = 0; x < myArray.GetLength(0); x++)
+        for (int y = 0; y < myArray.GetLength(1); y++)
+            if (legal_array[x, y] == speler)
+                return true;
+    return false;
+}
 
 
 
@@ -327,7 +337,6 @@ void zet(Object o, MouseEventArgs ea)
 
     afbeelding.Invalidate();
     flipper(x, y, current_player);
-    UpdateScore();
     legal_array = legal();
 
     teken_raster(null, EventArgs.Empty);
@@ -351,10 +360,11 @@ void zet(Object o, MouseEventArgs ea)
         WiensZet.Text = "Blauw is aan de beurt";
         WiensZet.BackColor = Color.Blue;
     }
+    UpdateScore();
 }
 
 
-void TelStenen(out int rood, out int blauw)
+void TelStenen()
 {
     rood = 0;
     blauw = 0;
@@ -371,9 +381,18 @@ void TelStenen(out int rood, out int blauw)
                 blauw++;
         }
     }
+    CheckSpelKlaar();
+}
 
-    //kijken of er is gewonnen
-    if (rood + blauw == grootte * grootte)
+
+//kijken of er is gewonnen door vol bord
+void CheckSpelKlaar()
+{
+    //kijken hoe groot het raster is 
+    int n = myArray.GetLength(0);
+
+
+    if (rood + blauw == n * n)
     {
         if (rood > blauw)
         {
@@ -393,10 +412,15 @@ void TelStenen(out int rood, out int blauw)
     }
 }
 
-
 //functie om te kunnen passen
 void PasHandler(object o,EventArgs e)
 {
+
+    //zorgen dat je niet kan passen als je gewoon een zet hebt
+    byte speler = Beurt % 2 == 0 ? (byte)1 : (byte)2;
+    if (HeeftLegaleZet(speler)) return;
+
+    TelStenen();
     Beurt += 1;
     PasTeller += 1;
     legal_array = legal();
@@ -449,7 +473,11 @@ Help.Click += (s, e) =>
 };
 
 //nieuw spel button
-NieuwSpelKnop.Click += teken_raster;
+NieuwSpelKnop.Click += (o, e) =>
+{
+    int gekozenGrootte = (int)grootteKeuze.SelectedItem;
+    NieuwSpel(gekozenGrootte);
+};
 //teken het eerste speelveld van 6x6
 NieuwSpel(6);
 
