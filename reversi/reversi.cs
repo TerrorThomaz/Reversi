@@ -98,10 +98,10 @@ Label WiensZet = new Label();
 scherm.Controls.Add(WiensZet);
 WiensZet.Location = new Point(160, 560);
 WiensZet.Size = new Size(480, 100);
-WiensZet.Text = "Rood is aan zet";
+WiensZet.Text = "Blauw is aan zet";
 WiensZet.TextAlign = ContentAlignment.MiddleCenter;
 WiensZet.ForeColor = Color.White;
-WiensZet.BackColor = Color.Red;
+WiensZet.BackColor = Color.Blue;
 WiensZet.Font = new Font("Segoe UI", 30);
 
 
@@ -113,7 +113,7 @@ WiensZet.Font = new Font("Segoe UI", 30);
 void NieuwSpel(int grootte)
     {
     myArray = matrix(grootte);
-    Beurt = 0;
+    Beurt = 1;
     PasTeller = 0;
     helpAan = false;
     UpdateScore();
